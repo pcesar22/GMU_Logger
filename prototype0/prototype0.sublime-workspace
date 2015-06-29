@@ -1,0 +1,1101 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"inf",
+				"infDistance"
+			],
+			[
+				"buff",
+				"BUFFER_SIZE"
+			],
+			[
+				"func",
+				"func_pointer"
+			],
+			[
+				"sensor",
+				"sensorList"
+			],
+			[
+				"buffer",
+				"bufferIndex"
+			],
+			[
+				"raw",
+				"rawReading"
+			],
+			[
+				"fun",
+				"convFunc_ptr_t"
+			],
+			[
+				"proces",
+				"processedReading"
+			],
+			[
+				"ana",
+				"analogRead	Arduino analogRead"
+			],
+			[
+				"conv",
+				"convFunc_ptr_t"
+			],
+			[
+				"con",
+				"conductor"
+			],
+			[
+				"analo",
+				"analogSensorNode"
+			],
+			[
+				"analog",
+				"analogSensor_t"
+			],
+			[
+				"func_p",
+				"func_ptr_t"
+			],
+			[
+				"senso",
+				"sensorList"
+			],
+			[
+				"f",
+				"func_pointer"
+			],
+			[
+				"shar",
+				"sharpProcessor_f"
+			],
+			[
+				"read",
+				"analogRead"
+			],
+			[
+				"sensr",
+				"sensorList"
+			],
+			[
+				"sen",
+				"sensor_t"
+			],
+			[
+				"se",
+				"sensorPin"
+			],
+			[
+				"Pnew",
+				"PnewEst"
+			],
+			[
+				"theta",
+				"thetaEst"
+			],
+			[
+				"meas",
+				"measuredTheta"
+			],
+			[
+				"ol",
+				"oldTheta"
+			],
+			[
+				"mesa",
+				"measureTheta"
+			],
+			[
+				"the",
+				"thetaNow"
+			],
+			[
+				"th",
+				"thetaNext"
+			],
+			[
+				"gyro",
+				"gyroRange"
+			],
+			[
+				"accel",
+				"accelgyro"
+			],
+			[
+				"comm",
+				"command_t"
+			],
+			[
+				"CO",
+				"CMODE_STRING"
+			],
+			[
+				"send",
+				"sendUART"
+			],
+			[
+				"Nok",
+				"Nokia_h"
+			],
+			[
+				"pr",
+				"printMatrix"
+			],
+			[
+				"if",
+				"ifmain	if __name__ == '__main__'"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "\n\n\n#define SHARP_ADDRESS   0x01\n#define SENSOR_COUNT    1\n#define BUFFER_SIZE     1000\n///////////////////////\n// Memory Allocation //\n///////////////////////\n\n// Storage\nfloat buffer[BUFFER_SIZE];\nint bufferIndex;\n\n//////////////////////////\n// Function prototypes  //\n//////////////////////////\n\nfloat sharpProcessor_f(int);\nvoid updateSensorReadings(void);\nvoid bufferDump(void);\n\n//////////////////////\n// type definitions //\n//////////////////////\n\n\n\n// Function pointers for reading conversion\ntypedef float (*convFunc_ptr_t)(int);\n\n// hw pin type\ntypedef int pin_t;\n\n// Analog sensor structure\ntypedef struct analogSensor_t {\n\n\n    uint8_t address;\n    //uint8_t samplePeriod;\n\n    // Readings\n    int rawReading;\n    float processedReading;\n\n    // Reading function processor\n    convFunc_ptr_t func_pointer;\n\n    // HW pin being used\n    int pin;\n\n    \n\n} analogSensor_t;\n\n\n// Node for use of lists.\ntypedef struct analogSensorNode{\n  analogSensor_t aSensor;\n  struct analogSensorNode *next;\n};\n\n\n//////////////////////////\n// Sensor declaration   //\n//////////////////////////\n\n\n// Declare analog sensors\nanalogSensor_t sharpSensor;\n\n\n\n// Place the analog sensors in a list, as well as their\n// hardware/software instantiation information\n\n// Analog sensor list\nanalogSensor_t sensorList[] = {sharpSensor};\n\n// Analog processor functions (convert raw 0-1023 into SI units)\nconvFunc_ptr_t funcList[] = {sharpProcessor_f};\n\n// Sensor Addresses for later use\nuint8_t addressList[] = {SHARP_ADDRESS};\n\n// Hardware pins used by the sensors\npin_t pinList[] = {A0};\n\n\n\n// List components\nstruct analogSensorNode *root;\nstruct analogSensorNode *conductor;\n\nchar incomingByte = 0;\n\nvoid setup() {\n  // put your setup code here, to run once:\n  Serial3.begin(9600);\n  Serial.begin(9600);\n\n  // Start bufferIndex\n  bufferIndex = 0;\n  // Initialize the address, hw and process functions\n  sensorList[0].address = addressList[0];\n  sensorList[0].pin = pinList[0];\n  sensorList[0].func_pointer = funcList[0];\n\n  //eremy.george@digi.com\n  \n}\n\nvoid loop() {\n\n  for(int i = 0 ; i < SENSOR_COUNT ; i++){\n    updateSensorReadings();\n    Serial.println(sensorList[i].processedReading);\n  }\n\n  // Do internet stuff here\n  \n  // while(Serial.available() > 0){\n  //   incomingByte = Serial.read();\n  //   Serial3.write(incomingByte);\n  //   Serial.print(incomingByte);\n  // }\n  // while(Serial3.available() > 0){\n  //   incomingByte = Serial3.read();\n  //   Serial.print(incomingByte);\n  // }\n }\n\n\n// Simple ultra-random function to calculate actual values\nfloat sharpProcessor_f(int rawValue){\n  float distance = 1.0f*rawValue/1024;\n  distance = 100 - 90/0.57*distance;\n  return distance;\n}\n\nvoid updateSensorReadings(){\n  for(int i = 0; i < SENSOR_COUNT ; i++){\n    // get reading from ping\n    sensorList[i].rawReading = analogRead(sensorList[i].pin);\n    \n    // process reading\n    sensorList[i].processedReading  = \n      sensorList[i].func_pointer(sensorList[i].rawReading);\n    \n    // Add to buffer, for now it's global\n    buffer[bufferIndex] = sensorList[i].processedReading;\n\n    if(bufferIndex > BUFFER_SIZE) bufferIndex = 0;\n    else bufferIndex++;\n    delay(5);\n\n  }\n}\n\nvoid bufferDump(void){\n  for(int i = 0; i < BUFFER_SIZE; i++){\n    Serial.println(buffer[i]);\n\n    phant.add(\"\")\n  }\n\n}\n",
+			"file": "prototype0.ino.ino",
+			"file_size": 3386,
+			"file_write_time": 130799188366598841,
+			"settings":
+			{
+				"buffer_size": 3291,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Desktop/Academic/George Mason/prototype1/prototype1.ino",
+			"settings":
+			{
+				"buffer_size": 6301,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "\n// Include required libraries\n#include <Adafruit_CC3000.h>\n#include <SPI.h>\n#include <CC3000_MDNS.h>\n#include <aREST.h>\n#include <avr/wdt.h>\n#include <Phant.h>\n\nchar server[] = \"data.sparkfun.com\";\nconst String pub_key = \"EJE9a168KNFy1O5WdVyj\";\nconst String priv_key = \"dqMz6G4NVbuYeXyzDgYA\";\n\n\n// Define CC3000 chip pins\n#define ADAFRUIT_CC3000_IRQ   3\n#define ADAFRUIT_CC3000_VBAT  5\n#define ADAFRUIT_CC3000_CS    10\n\n#define SHARP_ADDRESS   0x01\n#define SENSOR_COUNT    1\n#define BUFFER_SIZE     1000\n\n// WiFi network (change with your settings !)\n#define WLAN_SSID       \"PCWireless\"\n#define WLAN_PASS       \"ad23=cent96\"\n#define WLAN_SECURITY   WLAN_SEC_WPA2\n\n// Create CC3000\nAdafruit_CC3000 cc3000 = Adafruit_CC3000(ADAFRUIT_CC3000_CS, \nADAFRUIT_CC3000_IRQ, ADAFRUIT_CC3000_VBAT, SPI_CLOCK_DIV2);\n\n\n\n// The port to listen for incoming TCP connections \n#define LISTEN_PORT           80\n\n// Server instance\n//Adafruit_CC3000_Server myServer(LISTEN_PORT);\n// Client instance\nAdafruit_CC3000_Client myClient();\n\n\n// Infrared sensor pin\n#define SENSPIN   A0\n#define LEDPIN    2\n\nconst byte NUM_FIELDS = 3;\nconst String fieldNames[NUM_FIELDS] = {\"Distance\", \"switch\", \"name\"};\n\n///////////////////////\n// Memory Allocation //\n///////////////////////\n\n// Storage\nfloat buffer[BUFFER_SIZE];\nint bufferIndex;\n\n//////////////////////////\n// Function prototypes  //\n//////////////////////////\n\nfloat sharpProcessor_f(int);\nvoid updateSensorReadings(void);\nvoid bufferDump(void);\n\n//////////////////////\n// type definitions //\n//////////////////////\n\n\n\n// Function pointers for reading conversion\ntypedef float (*convFunc_ptr_t)(int);\n\n// hw pin type\ntypedef int pin_t;\n\n// Analog sensor structure\ntypedef struct analogSensor_t {\n\n\n    uint8_t address;\n    //uint8_t samplePeriod;\n\n    // Readings\n    int rawReading;\n    float processedReading;\n\n    // Reading function processor\n    convFunc_ptr_t func_pointer;\n\n    // HW pin being used\n    int pin;\n\n    \n\n} analogSensor_t;\n\n\n// Node for use of lists.\ntypedef struct analogSensorNode{\n  analogSensor_t aSensor;\n  struct analogSensorNode *next;\n};\n\n\n//////////////////////////\n// Sensor declaration   //\n//////////////////////////\n\n\n// Declare analog sensors\nanalogSensor_t sharpSensor;\n\n\n\n// Place the analog sensors in a list, as well as their\n// hardware/software instantiation information\n\n// Analog sensor list\nanalogSensor_t sensorList[] = {sharpSensor};\n\n// Analog processor functions (convert raw 0-1023 into SI units)\nconvFunc_ptr_t funcList[] = {sharpProcessor_f};\n\n// Sensor Addresses for later use\nuint8_t addressList[] = {SHARP_ADDRESS};\n\n// Hardware pins used by the sensors\npin_t pinList[] = {A0};\n\n\n\n// List components\n// struct analogSensorNode *root;\n// struct analogSensorNode *conductor;\n\nchar incomingByte = 0;\n\nvoid setup() {\n  humidity = 0;\n\n  // Start serial\n  Serial3.begin(9600);\n  Serial.begin(115200);\n\n\n  // Start bufferIndex\n  bufferIndex = 0;\n\n  // Initialize the address, hw and process functions\n  sensorList[0].address = addressList[0];\n  sensorList[0].pin = pinList[0];\n  sensorList[0].func_pointer = funcList[0];\n\n\n  ccInit();\n // Start server\n  \n\n  Serial.println(F(\"Server online! Listening for connections...\"));\n  \n}\n\nvoid loop() {\n\n  for(int i = 0 ; i < SENSOR_COUNT ; i++){\n    updateSensorReadings();\n    //Serial.println(sensorList[i].processedReading);\n    //temperature = sensorList[i].rawReading; // will become a vector of values\n  }\n  Serial.println(\"\\nPosting data!\\n\");\n  delay(1000);\n  \n  postData();\n\n }\n\n\n// Simple ultra-random function to calculate actual values\nfloat sharpProcessor_f(int rawValue){\n  float distance = 1.0f*rawValue/1024;\n  distance = 100 - 90/0.57*distance;\n  return distance;\n}\n\nvoid updateSensorReadings(){\n  for(int i = 0; i < SENSOR_COUNT ; i++){\n    // get reading from ping\n    sensorList[i].rawReading = analogRead(sensorList[i].pin);\n    \n    // process reading\n    sensorList[i].processedReading  = \n      sensorList[i].func_pointer(sensorList[i].rawReading);\n    \n    // Add to buffer, for now it's global\n    buffer[bufferIndex] = sensorList[i].processedReading;\n\n    if(bufferIndex > BUFFER_SIZE) bufferIndex = 0;\n    else bufferIndex++;\n    delay(5);\n\n  }\n}\n\nvoid bufferDump(void){\n  for(int i = 0; i < BUFFER_SIZE; i++){\n    Serial.println(buffer[i]);\n  }\n}\n\n\nvoid ccInit(){\n  // Initialise the CC3000 module\n  Serial.println(\"Initalizing module\");\n  if (!cc3000.begin())\n  {\n    while(1);\n  }\n  Serial.println(\"Ok! Connecting to wifi network\");\n  // Connect to  WiFi network\n  cc3000.connectToAP(WLAN_SSID, WLAN_PASS, WLAN_SECURITY);\n    \n  Serial.println(\"OK! Getting DHCP and initializing DNS responder\");\n  // Check DHCP\n  while (!cc3000.checkDHCP())\n  {\n    delay(100);\n  }  \n  \n \n  displayConnectionDetails(); \n}\n\nbool displayConnectionDetails(void)\n{\n  uint32_t ipAddress, netmask, gateway, dhcpserv, dnsserv;\n  \n  if(!cc3000.getIPAddress(&ipAddress, &netmask, &gateway, &dhcpserv, &dnsserv))\n  {\n    Serial.println(F(\"Unable to retrieve the IP Address!\\r\\n\"));\n    return false;\n  }\n  else\n  {\n    Serial.print(F(\"\\nIP Addr: \")); cc3000.printIPdotsRev(ipAddress);\n    Serial.print(F(\"\\nNetmask: \")); cc3000.printIPdotsRev(netmask);\n    Serial.print(F(\"\\nGateway: \")); cc3000.printIPdotsRev(gateway);\n    Serial.print(F(\"\\nDHCPsrv: \")); cc3000.printIPdotsRev(dhcpserv);\n    Serial.print(F(\"\\nDNSserv: \")); cc3000.printIPdotsRev(dnsserv);\n    Serial.println();\n    return true;\n  }\n}\n\n\nvoid postData(){\n  if(!myClient.connect(server,LISTEN_PORT)){\n    Serial.println(\"Error: 4! not able to connect client\");\n  }\n\n}",
+			"file": "/C/Users/Paulo Costa/Desktop/Academic/George Mason/prototype2/prototype2.ino",
+			"file_size": 5823,
+			"file_write_time": 130799947361136434,
+			"settings":
+			{
+				"buffer_size": 5557,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/println.sublime-snippet",
+			"settings":
+			{
+				"buffer_size": 139,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/debug.h",
+			"settings":
+			{
+				"buffer_size": 1889,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/phant/src/Phant.cpp",
+			"settings":
+			{
+				"buffer_size": 5788,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/cc3000_common.h",
+			"settings":
+			{
+				"buffer_size": 14940,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/wlan.h",
+			"settings":
+			{
+				"buffer_size": 23355,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/wlan.cpp",
+			"settings":
+			{
+				"buffer_size": 40495,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000_Server.cpp",
+			"settings":
+			{
+				"buffer_size": 9348,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000_Server.h",
+			"settings":
+			{
+				"buffer_size": 4487,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000.cpp",
+			"settings":
+			{
+				"buffer_size": 49741,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000.h",
+			"settings":
+			{
+				"buffer_size": 6626,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "Packages/C++/C++.sublime-build",
+	"command_palette":
+	{
+		"height": 375.0,
+		"selected_items":
+		[
+			[
+				"disa",
+				"Package Control: Disable Package"
+			],
+			[
+				"disabl",
+				"Package Control: Disable Package"
+			],
+			[
+				"key",
+				"Preferences: Key Bindings - Default"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"disab",
+				"Package Control: Disable Package"
+			],
+			[
+				"install ",
+				"Package Control: Install Package"
+			],
+			[
+				"pack",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: install",
+				"Package Control: Install Package"
+			],
+			[
+				"Package Control: instal",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 386.0
+	},
+	"console":
+	{
+		"height": 160.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": true,
+		"show_open_files": true,
+		"show_tabs": true,
+		"side_bar_visible": true,
+		"status_bar_visible": true
+	},
+	"file_history":
+	[
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/aREST/examples/WiFi_CC3000/WiFi_CC3000.ino",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/app.js",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000.cpp",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/wifi_weather_station/wifi_weather_station.ino",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/public/js/ajaxq.js",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/public/js/demo.js",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/views/interface.jade",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/node_modules/express/index.js",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/public/css/demo.css",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/node_modules/arest/index.js",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/wifi-weather-station/interface/node_modules/jade/jade.js",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/SFE_CC3000/examples/SmartConfig/SmartConfig.ino",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/examples/SmartConfigCreate/SmartConfigCreate.ino",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/examples/buildtest/buildtest.ino",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/evnt_handler.cpp",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/phant/src/Phant.h",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/phant/examples/SparkFun/sparkfun.ino",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/socket.h",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/SFE_CC3000/SFE_CC3000.cpp",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000.h",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/ccspi.cpp",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/ccspi.h",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/debug.cpp",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/library.json",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/examples/SendTweet/SendTweet.ino",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/Default/Preferences.sublime-settings",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/include/xbee/platform_posix.h",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/Preferences.sublime-settings",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/socket.cpp",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/prototype0/prototype0.ino.ino",
+		"/C/Users/Paulo Costa/Documents/Arduino/libraries/MPU6050/MPU6050.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/Hobby/Segway/dual-vnh5019-motor-shield-master/DualVNH5019MotorShield/DualVNH5019MotorShield.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/Hobby/Segway/dual-vnh5019-motor-shield-master/DualVNH5019MotorShield/DualVNH5019MotorShield.cpp",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/Default/Default (Windows).sublime-keymap",
+		"/C/Users/Paulo Costa/Desktop/Academic/Hobby/SPOJ/HelloWorld.c",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/CTags/CTags.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/CTags.sublime-settings",
+		"/C/energia-0101E0015/hardware/msp432/libraries/XTend/XBee.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/XTend/XBee.cpp",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/node-interface-sketch/node-interface-sketch.ino",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/HardwareSerial.cpp",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/HardwareSerial.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/include/xbee/time.h",
+		"/C/energia-0101E0015/hardware/common/ti/drivers/UART.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Nokia5110/Nokia.cpp",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Nokia5110/Nokia.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/XTend/xtend.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/test/unittest.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/src/posix/xbee_readline.c",
+		"/C/energia-0101E0015/hardware/msp432/libraries/XTend/SDI12reference.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/src/posix/xbee_serial_posix.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/src/posix/xbee_platform_posix.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/include/xbee/platform.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/XTend/xtend.cpp",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/samples/posix/xbee_term_posix.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/test/main.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/src/xbee/xbee_atmode.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/include/xbee/atmode.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/xbee_ansic_library-master/include/xbee/firmware.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/XTend/SDI12reference.cpp",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/Base File.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/Distraction Free.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/JSON.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/Package Control/Package Control.sublime-settings",
+		"/C/energia-0101E0015/hardware/msp432/libraries/CMSIS_DSP/CMSIS_DSP.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/driverlib/driverlib.h",
+		"/C/energia-0101E0015/hardware/common/ti/drivers/uart/UARTMSP432.h",
+		"/C/energia-0101E0015/hardware/msp432/boards.txt",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/Wire.cpp",
+		"/C/energia-0101E0015/hardware/msp432/libraries/9XTend/9xtend.cpp",
+		"/C/energia-0101E0015/hardware/msp432/libraries/9XTend/9xtend.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/SPI.cpp",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/driverlib/uart.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/wiring.c",
+		"/C/energia-0101E0015/hardware/common/Print.h",
+		"/C/energia-0101E0015/hardware/common/Stream.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/wiring_private.h",
+		"/C/energia-0101E0015/hardware/common/ti/drivers/bsp/Board.h",
+		"/C/Users/Paulo Costa/Desktop/Garbage Collector/MSP-EXP432P401R_Software_Examples/Firmware/Source/CC3100BOOST_MQTT-TwitterLED_MSP432P401R/board/board.c",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/Energia.h",
+		"/C/energia-0101E0015/hardware/common/ti/sysbios/BIOS.h",
+		"/C/energia-0101E0015/hardware/common/ti/drivers/PIN.h",
+		"/C/energia-0101E0015/hardware/common/ti/sysbios/gates/GateMutex.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/wiring_pulse.c",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/wiring_shift.c",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/wiring_digital.c",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/pins_energia.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/pins.c",
+		"/C/energia-0101E0015/hardware/common/ti/sysbios/knl/Task.h",
+		"/C/energia-0101E0015/hardware/common/IPAddress.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/Arduino.h",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/DocBlockr/Base File.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/C++11/messages/install.txt",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/C99/messages/install.txt",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/C++11.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/C++11/C++11.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/C99/C99.sublime-settings",
+		"/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/Folder List/Default.sublime-commands",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/node-interface-sketch/LiquidCrystal.cpp",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/testSerial.c",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Nokia5110/Adafruit_PCD8544.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Nokia5110/examples/Adafruit_PCD8544.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Nokia5110/examples/Adafruit_PCD8544.cpp",
+		"/C/Users/Paulo Costa/Desktop/Academic/George Mason/node-interface-sketch/LiquidCrystal.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/Hobby/mpu6050interface/mpu6050interface.cpp",
+		"/C/ti/TivaWare_C_Series-2.1.0.12573/sensorlib/mpu9150.h",
+		"/C/Users/Paulo Costa/Desktop/Academic/ARM uTexas/CCS workspace/Blinky2/main.c",
+		"/C/Keil/TExaSware/C10_SysTick/PLL.h",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Nokia5110/examples/pcdtest/pcdtest.ino",
+		"/C/energia-0101E0015/hardware/msp432/libraries/grlib/grlib.h",
+		"/C/ti/msp430/MSPWare_2_20_00_19/driverlib/driverlib/MSP432P4xx/uart.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_euscia0_uart_01/msp432p401_euscia0_uart_01.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_sysctl_03/msp432p401_sysctl_03.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_sysctl_02/msp432p401_sysctl_02.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_sysctl_01/msp432p401_sysctl_01.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_ta0_01/msp432_startup_ccs.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_ta0_01/msp432p401_ta0_01.c",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_cs_01/msp432p401_cs_01.c",
+		"/C/ti/TivaWare_C_Series-2.1.1.71/sensorlib/tmp006.c",
+		"/C/ti/TivaWare_C_Series-2.1.1.71/driverlib/i2c.c",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Nokia5110/Adafruit_PCD8544.cpp",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Adafruit-GFX-Library-master/Adafruit_GFX.cpp",
+		"/C/Users/Paulo Costa/Desktop/Academic/MSP/MSP432exampleCodes/msp432p401_euscia0_uart_03/msp432p401_euscia0_uart_03.c",
+		"/C/energia-0101E0015/hardware/msp432/libraries/Adafruit-GFX-Library-master/Adafruit_GFX.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/avr/pgmspace.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/inc/CMSIS/cmsis_ccs.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/inc/CMSIS/core_cm4.h",
+		"/C/energia-0101E0015/hardware/msp432/cores/msp432/inc/CMSIS/core_cmInstr.h"
+	],
+	"find":
+	{
+		"height": 49.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"TCP",
+			"rest",
+			"Temperature",
+			"temperature",
+			"distan",
+			"send",
+			"CHECK_SUCCESS",
+			"startSmartConfig",
+			"displayDriverMode",
+			"begin",
+			"wlan",
+			"wlan_smart_config_set",
+			"cc3k_int_poll",
+			"connectToAP",
+			"displayDriverMode",
+			"CC3000_TINY_DRIVER",
+			"checkFirmwareVersion",
+			"display",
+			"func_ptr_t",
+			"MAX",
+			"0",
+			"sensor_t",
+			"i",
+			"dmp",
+			"MPU6050_GYRO_FS_250",
+			"setFullScaleGyroRange",
+			"Gyr",
+			"Gyro Range",
+			"getFullScaleGyroRange",
+			"setFullScaleGyroRange",
+			"init",
+			"getM1Fault",
+			"setFUllScaleGyroRange",
+			"setFUllScal",
+			"setFullScaleGyroRange",
+			"GYRO_CONFIG",
+			"FS_SEL",
+			"FS_",
+			"set",
+			"setFreq",
+			"write",
+			"writ",
+			";",
+			"*wheel*",
+			"mouse",
+			"wheel",
+			"middle",
+			"auto",
+			"show menu",
+			"show",
+			"auto",
+			"class X",
+			"C",
+			"board_init",
+			"Board_initUART",
+			"Board",
+			"Board_Init",
+			"Board_I",
+			"Board",
+			"BOARD",
+			"BO",
+			"bo",
+			"Board",
+			"Board_In",
+			"Board_INI",
+			"UART_Params",
+			"module",
+			"Serial",
+			"Serial1",
+			"uartModule",
+			"init",
+			"com",
+			"    \n",
+			"hide",
+			"cursor_x",
+			"I2C_Params_init",
+			"T_REF",
+			"TMP006DataTemperatureGetFloat",
+			"portOutput",
+			"SPI_CLOCK_DIV4",
+			"SPI_CLOCK",
+			"min",
+			"LCD_K",
+			"LCD_",
+			"MSP",
+			"GPIOPadConfigSet",
+			"tDisplay",
+			"Device",
+			"MAX"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"Distance",
+			"\n\nconvFunc_ptr_t",
+			"analogSensor_t",
+			"damn"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 2,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "prototype0.ino.ino",
+					"settings":
+					{
+						"buffer_size": 3291,
+						"regions":
+						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										171,
+										171
+									],
+									[
+										2037,
+										2037
+									],
+									[
+										2680,
+										2680
+									]
+								],
+								"scope": "bookmarks"
+							}
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Arduino-like IDE/Arduino.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "/C/Users/Paulo Costa/Desktop/Academic/George Mason/prototype1/prototype1.ino",
+					"settings":
+					{
+						"buffer_size": 6301,
+						"regions":
+						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										0,
+										0
+									],
+									[
+										1253,
+										1253
+									],
+									[
+										2696,
+										2696
+									],
+									[
+										3355,
+										3355
+									],
+									[
+										6301,
+										6301
+									]
+								],
+								"scope": "bookmarks"
+							}
+						},
+						"selection":
+						[
+							[
+								0,
+								6301
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Arduino-like IDE/Arduino.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2508.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "/C/Users/Paulo Costa/Desktop/Academic/George Mason/prototype2/prototype2.ino",
+					"settings":
+					{
+						"buffer_size": 5557,
+						"regions":
+						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										5429,
+										5429
+									]
+								],
+								"scope": "bookmarks"
+							}
+						},
+						"selection":
+						[
+							[
+								5555,
+								5555
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Arduino-like IDE/Arduino.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 4383.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "/C/Users/Paulo Costa/AppData/Roaming/Sublime Text 2/Packages/User/println.sublime-snippet",
+					"settings":
+					{
+						"buffer_size": 139,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								139,
+								139
+							]
+						],
+						"settings":
+						{
+							"default_extension": "sublime-snippet",
+							"syntax": "Packages/XML/XML.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/debug.h",
+					"settings":
+					{
+						"buffer_size": 1889,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								956,
+								956
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 114.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/phant/src/Phant.cpp",
+					"settings":
+					{
+						"buffer_size": 5788,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3997,
+								3997
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 4382.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/cc3000_common.h",
+					"settings":
+					{
+						"buffer_size": 14940,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4776,
+								4776
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1653.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/wlan.h",
+					"settings":
+					{
+						"buffer_size": 23355,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"tab_size": 8,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/utility/wlan.cpp",
+					"settings":
+					{
+						"buffer_size": 40495,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								36622,
+								36622
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 20532.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 3,
+			"sheets":
+			[
+				{
+					"buffer": 9,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000_Server.cpp",
+					"settings":
+					{
+						"buffer_size": 9348,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3984,
+								3984
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 10,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000_Server.h",
+					"settings":
+					{
+						"buffer_size": 4487,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1842,
+								1842
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 404.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000.cpp",
+					"settings":
+					{
+						"buffer_size": 49741,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 12,
+					"file": "/C/Users/Paulo Costa/Documents/Arduino/libraries/Adafruit_CC3000/Adafruit_CC3000.h",
+					"settings":
+					{
+						"buffer_size": 6626,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2617,
+								2617
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C++ Starting Kit/C.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1083.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 38.0
+	},
+	"input":
+	{
+		"height": 0.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			],
+			[
+				1,
+				0,
+				2,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			0.5,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.Demo":
+	{
+		"height": 132.0
+	},
+	"output.DualVNH5019MotorShield":
+	{
+		"height": 132.0
+	},
+	"output.exec":
+	{
+		"height": 132.0
+	},
+	"replace":
+	{
+		"height": 93.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"selected_items":
+		[
+		],
+		"width": 380.0
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 265.0,
+	"status_bar_visible": true
+}
